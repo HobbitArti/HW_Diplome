@@ -1,0 +1,20 @@
+{
+    "email": "baginab484@adambra.com",
+    "password": "Cal30/12",
+    "company": "Диплом",
+    "user_name": "Артём",
+    "company_id": "dcf12d98-a410-4500-bfa1-2a6deb39a1ef",
+    "api_key": "1728478706220_021ec923205f1ac737c2136803f703ef1b47ca1747ec6b28d119952ae898eb1f",
+    "role_admin": "admin",
+    "project_title": "Автотесты",
+    "bg_active_color": "rgba(63, 139, 253, 1)",
+    "completed_task_title_color": "rgba(177, 186, 205, 1)",
+    "new_column_color": 16,
+    "error_description_empty_project_title": "title should not be empty",
+    "error_bad_request": "Bad Request",
+    "error_description_unauth": "Unauthorized",
+    "error_unauth": "Unauthorized",
+    "error_connection": "Невозможно получить ответ от сервера, проверьте подключение к интернету.",
+    "task_title": "Диплом_Автотесты",
+    "new_column_title": "Обновленное название"
+  }
