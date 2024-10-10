@@ -4,12 +4,33 @@ import pytest
 
 import random
 
-
 from api.AuthAPI import AuthAPI
 from api.ProjectAPI import ProjectApi
 from api.BoardAPI import BoardApi
 from api.ColumnAPI import ColumnApi
 from datatest.Data import DataProvider
+@pytest.fixture
+def project_api(test_data):  # Pass test_data as an argument
+    api_key = test_data.get("api_key")  # Access the API key from test_data
+    project_api = ProjectApi(api_key=api_key, base_url="https://ru.yougile.com/")
+    return project_api
+
+@pytest.fixture
+def auth_api(test_data):
+    api_key = test_data.get("api_key")
+    auth_api = AuthAPI(api_key=api_key, base_url="https://ru.yougile.com/")
+    return auth_api
+
+
+@pytest.fixture
+def test_data():
+    data_provider = DataProvider()
+    return data_provider
+
+
+@pytest.fixture
+def delete_utility_project():
+    return {}  # Initialize an empty dictionary to store the project ID
 
 
 @allure.epic('Тестирование функционала REST api сервиса YouGile')
@@ -22,10 +43,10 @@ class APITest:
     @allure.description('Добавление нового проекта в компанию')
     @allure.feature('CREATE')
     def create_project_test(
-            self,
-            project_api: ProjectApi,
-            test_data: DataProvider,
-            delete_utility_project: dict,
+        self,
+        project_api: ProjectApi,
+        test_data: DataProvider,
+        delete_utility_project: dict,
     ):
         with allure.step('Сгенерировать уникальное название проекта'):
             project_title = test_data.get('project_title') + str(random.randint(0, 99999))
@@ -63,28 +84,29 @@ class APITest:
             self,
             project_api: ProjectApi,
             generate_random_str: str,
-            delete_utility_project: dict
+            delete_utility_project: dict,
     ):
-        actual_project_id = project_api.create_project(f'1. {generate_random_str}').json()['id']
-        deleted_project_id = project_api.create_project(f'1. {generate_random_str}').json()['id']
+        with allure.step('Создать два тестовых проекта'):
+            actual_project_id = project_api.create_project(f'1. {generate_random_str}').json()['id']
+            deleted_project_id = project_api.create_project(f'2. {generate_random_str}').json()['id']
 
-        project_api.delete_project(deleted_project_id)
+        with allure.step('Удалить один из проектов'):
+            project_api.delete_project(deleted_project_id)
 
-        api_response = project_api.get_projects()
+        with allure.step('Получить список всех проектов'):
+            api_response = project_api.get_projects()
 
         with allure.step('Создать список id проектов, полученных в запросе'):
-            api_ids = []
-            for proj in api_response.json()['content']:
-                api_ids.append(proj['id'])
+            api_ids = [proj['id'] for proj in api_response.json()['content']]
 
         delete_utility_project['project_id'] = actual_project_id
 
         with allure.step('Проверка:'):
             with allure.step('Статус-код 200'):
                 assert api_response.status_code == 200
-            with allure.step('Список id проектов, полученных в запросе, НЕ содрежит id удаленного проекта'):
-                assert not deleted_project_id in api_ids
-            with allure.step('Список id проектов, полученных в запросе, содрежит id актуального проекта'):
+            with allure.step('Список id проектов, полученных в запросе, НЕ содержит id удаленного проекта'):
+                assert deleted_project_id not in api_ids
+            with allure.step('Список id проектов, полученных в запросе, содержит id актуального проекта'):
                 assert actual_project_id in api_ids
 
     @allure.id('AR-12')
@@ -93,6 +115,7 @@ class APITest:
     @allure.description('Изменить атрибуты колонки - название, цвет, родительскую доску')
     @allure.feature('PUT')
     def update_column_test(
+            self,
             project_api: ProjectApi,
             board_api: BoardApi,
             column_api: ColumnApi,
@@ -101,43 +124,37 @@ class APITest:
             delete_utility_board: dict,
             delete_utility_column: dict,
             test_data: DataProvider,
-            generate_random_str: str
+            generate_random_str: str,
     ):
-        project_id = create_utility_project['project_id']
-        with allure.step('Добавить в проект доски'):
-            with allure.step('Первая доска "1 {generate_random_str}"'):
-                first_board_id = board_api.create_board(f'1 {generate_random_str}', project_id).json()['id']
-            with allure.step('Вторая доска "2 {generate_random_str}"'):
-                second_board_id = board_api.create_board(f'2 {generate_random_str}', project_id).json()['id']
+        with allure.step('Создать тестовый проект'):
+            project_id = project_api.create_project(f'Test Project {generate_random_str}').json()['id']
+            create_utility_project['project_id'] = project_id
 
-        with allure.step('Добавить колонку на перую доску'):
-            column_id = column_api.create_column(f'Колонка {generate_random_str}', first_board_id).json()['id']
+        with allure.step('Добавить в проект две тестовые доски'):
+            first_board_id = board_api.create_board(f'Board 1 {generate_random_str}', project_id).json()['id']
+            delete_utility_board['first_board_id'] = first_board_id
+            second_board_id = board_api.create_board(f'Board 2 {generate_random_str}', project_id).json()['id']
+            delete_utility_board['second_board_id'] = second_board_id
 
-        body = {
-            'title': test_data.get('new_column_title'),
-            'color': test_data.get('new_column_color'),
-            'boardId': second_board_id
-        }
-        api_response = column_api.update_column(column_id, body)
+        with allure.step('Добавить колонку на первую доску'):
+            column_id = column_api.create_column(f'Column {generate_random_str}', first_board_id).json()['id']
+            delete_utility_column['column_id'] = column_id
 
-        updated_column = column_api.get_column_by_id(column_id).json()
+        with allure.step('Обновить колонку'):
+            body = {
+                'title': test_data.get('new_column_title'),
+                'color': test_data.get('new_column_color'),
+                'boardId': second_board_id,
+            }
+            api_response = column_api.update_column(column_id, body)
 
-        delete_utility_project['project_id'] = project_id
-        delete_utility_board['first_board_id'] = first_board_id
-        delete_utility_board['second_board_id'] = second_board_id
-        delete_utility_column['column_id'] = column_id
-
-        with allure.step('Проверка:'):
-            with allure.step('Статус-код 200'):
-                assert api_response.status_code == 200
-            with allure.step('В ответе вернулся id редактируемой колонки'):
-                assert api_response.json()['id'] == column_id
-            with allure.step('Название колонки обновлено'):
-                assert test_data.get('new_column_title') in updated_column['title']
-            with allure.step('Цвет колонки обновлен'):
-                assert test_data.get_int('new_column_color') == updated_column['color']
-            with allure.step('Родительская доска колонки обновлена'):
-                assert second_board_id == updated_column['boardId']
+        with allure.step('Проверить результат обновления'):
+            updated_column = column_api.get_column_by_id(column_id).json()
+            assert api_response.status_code == 200, "Column update failed. Status code is not 200."
+            assert api_response.json()['id'] == column_id, "Incorrect column ID returned."
+            assert test_data.get('new_column_title') == updated_column['title'], "Column title is incorrect."
+            assert test_data.get_int('new_column_color') == updated_column['color'], "Column color is incorrect."
+            assert second_board_id == updated_column['boardId'], "Parent board of the column is incorrect."
 
     @allure.id('AR-8')
     @allure.story('Негативные проверки по управлению проектами')
@@ -148,59 +165,51 @@ class APITest:
         with allure.step('Получить количество проектов ДО'):
             len_before = len(project_api.get_projects().json()['content'])
 
-        api_response = project_api.create_project('')
+        with allure.step('Отправить api-запрос для создания проекта с пустым названием'):
+            api_response = project_api.create_project('')
 
-        with allure.step('Получить количество проектов ПОСЛЕ'):
-            len_after = len(project_api.get_projects().json()['content'])
-
-        error_msg = test_data.get('error_description_empty_project_title')
-        with allure.step('Проверка:'):
-            with allure.step('Статус-код 400'):
-                assert api_response.status_code == 400
-            with allure.step('В ответе пришло поле statusCode:400'):
-                assert api_response.json()['statusCode'] == 400
-            with allure.step('В ответе поле message содержит описание ошибки'):
-                assert error_msg in api_response.json()['message']
-            with allure.step('В ответе пришло поле error:Bad Request'):
-                assert test_data.get('error_bad_request') == api_response.json()['error']
-            with allure.step('Количество проектов не изменилось'):
-                assert len_before == len_after
+        with allure.step('Проверка ответа:'):
+            assert api_response.status_code == 400, "Expected status code 400, but got {}.".format(
+                api_response.status_code)
+            assert api_response.json()['statusCode'] == 400, "Expected statusCode 400 in response, but got {}.".format(
+                api_response.json()['statusCode'])
+            assert test_data.get('error_description_empty_project_title') in api_response.json()[
+                'message'], "Error message is incorrect or missing."
+            assert test_data.get('error_bad_request') == api_response.json()['error'], "Error type is incorrect."
+            assert len_before == len(
+                project_api.get_projects().json()['content']), "Project count should not have changed."
 
     @allure.id('AR-11')
     @allure.story('Негативные проверки по управлению проектами')
-    @allure.title('Добавление проекта с удаленном ключом api')
-    @allure.description('Проверка обработки запроса на добавление проекта с удаленном ключом api')
+    @allure.title('Добавление проекта с удаленным ключом api')
+    @allure.description('Проверка обработки запроса на добавление проекта с удаленным ключом api')
     @allure.feature('POST')
     def create_project_deleted_api_key_test(
             self,
             auth_api: AuthAPI,
             project_api: ProjectApi,
-            test_data: DataProvider
+            test_data: DataProvider,
     ):
         with allure.step('Получить количество проектов ДО'):
             len_before = len(project_api.get_projects().json()['content'])
 
-        key_resp = auth_api.create_api_key(test_data.get('company_id'))
-        key = key_resp.json()['key']
-        auth_api.delete_api_key(key)
-        auth_api.get_api_keys(test_data.get('company_id'))
+        with allure.step('Создать API ключ'):
+            key_resp = auth_api.create_api_key(test_data.get('company_id'))
+            key = key_resp.json()['key']
 
-        api_response = project_api.create_project('test', key)
+        with allure.step('Удалить API ключ'):
+            auth_api.delete_api_key(key)
 
-        with allure.step('Получить количество проектов ПОСЛЕ'):
-            len_after = len(project_api.get_projects().json()['content'])
+        with allure.step('Отправить api-запрос для создания проекта с удаленным ключом'):
+            api_response = project_api.create_project('test', key)
 
-        error_msg = test_data.get('error_description_unauth')
-        error = test_data.get('error_unauth')
-
-        with allure.step('Проверка:'):
-            with allure.step('Статус-код 401'):
-                assert api_response.status_code == 401
-            with allure.step('В ответе пришло поле statusCode:401'):
-                assert api_response.json()['statusCode'] == 401
-            with allure.step('В ответе пришло поле message:{error_msg}'):
-                assert error_msg == api_response.json()['message']
-            with allure.step('В ответе пришло поле error:{error}'):
-                assert error == api_response.json()['error']
-            with allure.step('Количество проектов не изменилось'):
-                assert len_before == len_after
+        with allure.step('Проверка ответа:'):
+            assert api_response.status_code == 401, "Expected status code 401, but got {}.".format(
+                api_response.status_code)
+            assert api_response.json()['statusCode'] == 401, "Expected statusCode 401 in response, but got {}.".format(
+                api_response.json()['statusCode'])
+            assert test_data.get('error_description_unauth') == api_response.json()[
+                'message'], "Error message is incorrect or missing."
+            assert test_data.get('error_unauth') == api_response.json()['error'], "Error type is incorrect."
+            assert len_before == len(
+                project_api.get_projects().json()['content']), "Project count should not have changed."
