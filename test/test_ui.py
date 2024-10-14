@@ -1,23 +1,23 @@
 import allure
 import random
 from selenium.webdriver.remote.webdriver import WebDriver
-from ui.MainPage import IndexPage
-from ui.CompanuPage import TeamPage
-from ui.ProjectPage import ProjectPage
-from api.UserAPI import UserApi
-from api.ProjectAPI import ProjectApi
-from api.BoardAPI import BoardApi
-from api.ColumnAPI import ColumnApi
-from api.TaskAPI import TaskApi
-from datatest.Data import DataProvider
+from class_ui.MainPage import IndexPage
+from class_ui.CompanyPage import TeamPage
+from class_ui.ProjectsPage import ProjectPage
+from api.UserApi import UserApi
+from api.ProjectApi import ProjectApi
+from api.BoardApi import BoardApi
+from api.ColumnApi import ColumnApi
+from api.TaskApi import TaskApi
+from testdata.DataProvider import DataProvider
 
 
 @allure.epic('Тестирование интерфейса сервиса YouGile')
 @allure.severity(allure.severity_level.BLOCKER)
-@allure.suite('ui-тесты на авторизацию, управлению проектами и задачами')
+@allure.suite('UI-тесты на авторизацию, управлению проектами и задачами')
 class UITest:
 
-    @allure.id('AR-1')
+    @allure.id('YG-1')
     @allure.story('Позитивные проверки авторизации')
     @allure.title('Авторизация ранее зарегистрированного пользователя')
     @allure.description('Выполнить авторизацию ранее зарегистрированного пользователя')
@@ -36,7 +36,7 @@ class UITest:
             with allure.step('Email пользователя отображается в секции Сотрудники компании'):
                 assert test_data.get('email') == 'baginab484@adambra.com'
 
-    @allure.id('AR-4')
+    @allure.id('YG-4')
     @allure.story('Позитивные проверки по управлению проектами')
     @allure.title('Добавление проекта компании')
     @allure.description('Добавить новый проект компании через кнопку Добавить проект')
@@ -90,7 +90,7 @@ class UITest:
             with allure.step('В запросе списка проектов содержится добавленный проект'):
                 assert project_title in api_project_titles
 
-    @allure.id('AR-5')
+    @allure.id('YG-5')
     @allure.story('Позитивные проверки по управлению проектами')
     @allure.title('Удаление проекта компании')
     @allure.description('Удалить проект компании через кнопку Удалить в контекстном меню проекта')
@@ -129,7 +129,7 @@ class UITest:
                 else:
                     assert False
 
-    @allure.id('AR-6')
+    @allure.id('YG-6')
     @allure.story('Позитивные проверки по управлению задачами')
     @allure.title('Добавление задачи')
     @allure.description('Добавить задачу через заполнение и отправку формы Ввода названивания задачи')
@@ -195,7 +195,7 @@ class UITest:
             with allure.step('Добавленная задача содержится в списке задач для колонки с id {column_id}'):
                 assert test_data.get('task_title') in api_task_titles
 
-    @allure.id('AR-7')
+    @allure.id('YG-7')
     @allure.story('Позитивные проверки по управлению задачами')
     @allure.title('Отметить задачу выполненной')
     @allure.description('Нажать кнопку Отметить выполненной в контекстном меню задачи')
