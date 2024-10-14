@@ -2,79 +2,59 @@ import allure
 import requests
 from requests import Response
 
-
 class ProjectApi:
-    """Класс предоставляет методы для выполнения действий с проектами через api-запросы"""
-
-    __url: str
-    __headers: dict
+    """Класс для работы с API проектов."""
 
     def __init__(self, base_url: str, api_key: str) -> None:
-        """
-            Создание экземпляра класса ProjectApi
-
-            :param base_url: str: базовый url-адрес
-            :param api_key: str: ключ api
-
-            :return: None
-        """
-        self.__url = base_url + '/projects'
-        self.__headers = {'Authorization': 'Bearer {api_key}'.format(api_key=api_key)}
+        self.__url = "https://ru.yougile.com/api-v2"
+        self.__headers = {'Authorization': f'Bearer {api_key}'}
 
     @allure.step('[api]. Получение проектов компании')
     def get_projects(self) -> Response:
-        """
-            Отправляется GET-запрос для получения проектов
-
-            :return: Response: ответ http-запроса
-        """
-        return requests.get(self.__url, headers=self.__headers)
+        """Получить список проектов компании."""
+        response = requests.get(self.__url, headers=self.__headers)
+        response.raise_for_status()  # Генерируем исключение для кода ошибки
+        return response
 
     @allure.step('[api]. Получение информации по проекту с id {id}')
     def get_project_by_id(self, id: str) -> Response:
-        """
-            Отправляется GET-запрос для получения информации по проекту
-
-            :param id: str: id проекта
-
-            :return: Response: ответ http-запроса
-        """
-
-        return requests.get('{url}/{id}'.format(url=self.__url, id=id), headers=self.__headers)
+        """Получить информацию о проекте по его ID."""
+        response = requests.get(f'{self.__url}/{id}', headers=self.__headers)
+        response.raise_for_status()  # Генерируем исключение для кода ошибки
+        return response
 
     @allure.step('[api]. Создание проекта с названием "{title}"')
     def create_project(self, title: str, api_key: str | None = None, users_dict: dict | None = None) -> Response:
-        """
-            Отправляется POST-запрос для создания проекта
-
-            :param title: str: название проекта
-            :param api_key: str | None: (optional) ключ api
-            :param users_dict: dict | None: (optional) роли пользователя в формате "user_id":"role"
-
-            :return: Response: ответ http-запроса
-        """
-
-        headers = ''
-        if api_key == None:
-            headers = self.__headers
-        else:
-            headers = {'Authorization': f'Bearer {api_key}'}
-
+        """Создать новый проект."""
+        headers = self.__headers if api_key is None else {'Authorization': f'Bearer {api_key}'}
         body = {
             'title': title,
             'users': users_dict
         }
-
-        return requests.post(self.__url, headers=headers, json=body)
+        response = requests.post(self.__url, headers=headers, json=body)
+        response.raise_for_status()  # Генерируем исключение для кода ошибки
+        return response
 
     @allure.step('[api]. Удаление проекта с id {id}')
     def delete_project(self, id: str) -> None:
-        """
-            Отправляется PUT-запрос для удаления проекта
+        """Удалить проект по его ID."""
+        response = requests.put(f'{self.__url}/{id}', headers=self.__headers, json={"deleted": True})
+        response.raise_for_status()  # Генерируем исключение для кода ошибки
 
-            :param id: str: id проекта
+# Пример использования
+if __name__ == "__main__":
+    base_url = "https://example.com/api"  # Замените на ваш базовый URL
+    api_key = "ваш_api_ключ"  # Замените на ваш API ключ
+    project_api = ProjectApi(base_url, api_key)
 
-            :return: None
-        """
+    try:
+        # Пример получения проектов
+        projects = project_api.get_projects()
+        print("Список проектов:", projects.json())
 
-        requests.put('{url}/{id}'.format(url=self.__url, id=id), headers=self.__headers, json={"deleted": True})
+        # Пример создания проекта
+        new_project = project_api.create_project("Новый проект", users_dict={"user1": "user@example.com"})
+        print("Созданный проект:", new_project.json())
+
+    except Exception as e:
+        print("Ошибка:", e)

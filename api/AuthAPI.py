@@ -1,70 +1,54 @@
-import allure
 import requests
-from requests import Response
-
 
 class AuthAPI:
     """Класс предоставляет методы для отправки api-запросов на авторизацию"""
 
-    __url: str
-    __login: str
-    __password: str
+    def __init__(self, api_key, base_url="https://ru.yougile.com/api-v2"):
+        self.base_url = base_url
+        self.api_key = api_key
+        self.headers = {'Authorization': f'Bearer {self.api_key}'}
 
-    def __init__(self, base_url: str, login: str, password: str) -> None:
-        """
-            Создание экземпляра класса AuthApi
-            :param base_url: str: базовый url-адрес
-            :param login: str: логин пользователя
-            :param password: str: (optional) пароль пользователя
-
-            :return: None
-        """
-
-        self.__url = base_url + '/auth/keys'
-        self.__login = login
-        self.__password = password
-
-    @allure.step('[api]. Получение списка ключей api для компании')
-    def get_api_keys(self, company_id: str) -> list[dict]:
-        """
-            Отправлеяется POST-запрос для получение достпуных ключей api
-            :param company_id: str: id компании
-
-            :return: list[dict]: список объектов, содержащих информацию о ключах api
-        """
-
-        body = {
-            'login': self.__login,
-            'password': self.__password,
-            'companyId': company_id
+    def login(self, login, password):
+        """Метод для авторизации пользователя"""
+        url = f"{self.base_url}/auth/login"  # Предполагаем, что это конечная точка для логина
+        data = {
+            'login': login,
+            'password': password
         }
-        return requests.post(f'{self.__url}/get', json=body)
+        try:
+            response = requests.post(url, headers=self.headers, json=data)
+            response.raise_for_status()  # Генерируем исключение для кода ошибки
+            return response.json()  # Возвращаем данные пользователя или токен
+        except requests.exceptions.HTTPError as http_err:
+            print(f"HTTP error occurred: {http_err}")  # Пример: вывод ошибки
+        except Exception as err:
+            print(f"An error occurred: {err}")  # Пример: вывод ошибки
 
-    @allure.step('[api]. Создание нового ключа api')
-    def create_api_key(self, company_id: str) -> Response:
-        """
-            Отправлеяется POST-запрос для создания нового ключа api
+    def logout(self):
+        """Метод для выхода пользователя из системы"""
+        url = f"{self.base_url}/auth/logout"  # Предполагаем, что это конечная точка для логаута
+        try:
+            response = requests.post(url, headers=self.headers)
+            response.raise_for_status()  # Генерируем исключение для кода ошибки
+            if response.status_code == 204:  # Успешный выход
+                return True
+        except requests.exceptions.HTTPError as http_err:
+            print(f"HTTP error occurred during logout: {http_err}")  # Пример: вывод ошибки
+        except Exception as err:
+            print(f"An error occurred during logout: {err}")  # Пример: вывод ошибки
 
-            :param company_id: str: id компании
+# Пример использования
+if __name__ == "__main__":
+    api_key = "ваш_api_ключ"
+    auth_api = AuthAPI(api_key)
 
-            :return: Response: ответ http-запроса
-        """
+    try:
+        user_data = auth_api.login("ваш_логин", "ваш_пароль")
+        if user_data:
+            print("Успешная авторизация:", user_data)  # Логика работы с авторизованным пользователем
 
-        body = {
-            'login': self.__login,
-            'password': self.__password,
-            'companyId': company_id
-        }
-        return requests.post(self.__url, json=body)
-
-    @allure.step('[api]. Удаление ключа api - {api_key}')
-    def delete_api_key(self, api_key: str) -> None:
-        """
-            Отправлеяется DELETE-запрос для удаления ключа api
-
-            :param api_key: str: ключа api
-
-            :return: None
-        """
-
-        requests.delete(f'{self.__url}/{api_key}')
+            # Выход из системы
+            if auth_api.logout():
+                print("Успешный выход")
+    except Exception as e:
+        print("Ошибка:", e)
