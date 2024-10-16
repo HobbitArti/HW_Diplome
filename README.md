@@ -19,5 +19,5 @@ https://spiced-wizard-9df.notion.site/9a64854be1f342618d4572756273475b?pvs=4
 
 Автотесты запускаются через терминал вводом команды "**pytest**"
 
-"**api_key**" Брал с помощью **Postman** 
+"**api_key**" и "**company_id**" Брал с помощью **Postman** 
 
